@@ -1,0 +1,13 @@
+# Dependencies and Builds
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Version Control
+.git/
+
+# Heavy Metadata
+package-lock.json
+yarn.lock
