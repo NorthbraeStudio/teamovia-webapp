@@ -523,6 +523,10 @@ export default function Home() {
           const aggregateRow = aggregateByMatchId.get(match.id);
           const aggregateTas = extractAggregateMetricValue(aggregateRow?.summary_metrics, "tas");
           const aggregateSyniq = extractAggregateMetricValue(aggregateRow?.summary_metrics, "synchrony");
+          const analysisStatus: RecentMatch["analysis_status"] =
+            match.analysis_status === "completed" || hasCompletionMarker
+              ? "completed"
+              : match.analysis_status ?? null;
 
           return {
             ...match,
@@ -530,10 +534,7 @@ export default function Home() {
             syniq: aggregateSyniq ?? match.syniq ?? match.synIq ?? null,
             event_count: countError ? 0 : count || 0,
             has_summary: hasCompletionMarker,
-            analysis_status:
-              match.analysis_status === "completed" || hasCompletionMarker
-                ? "completed"
-                : match.analysis_status,
+            analysis_status: analysisStatus,
           };
         })
       );

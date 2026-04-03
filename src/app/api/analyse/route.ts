@@ -16,7 +16,10 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
   throw new Error("Supabase URL and service role key are required");
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+const safeSupabaseUrl: string = supabaseUrl;
+const safeSupabaseServiceRoleKey: string = supabaseServiceRoleKey;
+
+const supabase = createClient(safeSupabaseUrl, safeSupabaseServiceRoleKey);
 
 function isMissingStatusColumnError(message: string): boolean {
   return /Could not find the 'analysis_status' column|analysis_started_at|analysis_completed_at|analysis_error/i.test(
@@ -262,8 +265,8 @@ export async function POST(request: NextRequest) {
           youtube_url: videoSourceUrl,
           match_id: match.id,
           worker_auth: modalApiKey,
-          supabase_url: cleanEnvValue(supabaseUrl),
-          supabase_service_role_key: cleanEnvValue(supabaseServiceRoleKey),
+          supabase_url: cleanEnvValue(safeSupabaseUrl),
+          supabase_service_role_key: cleanEnvValue(safeSupabaseServiceRoleKey),
           home_team_color: homeTeamColor,
           away_team_color: awayTeamColor,
         }),

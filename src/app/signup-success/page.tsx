@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-export default function SignupSuccessPage() {
+function SignupSuccessContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
   const [isResending, setIsResending] = useState(false);
@@ -97,5 +97,24 @@ export default function SignupSuccessPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function SignupSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center p-6 bg-[#0e0c20] text-[#e7e2ff]">
+          <section className="w-full max-w-2xl rounded-2xl border border-[#47436c]/30 bg-[#252147]/40 p-8 md:p-10 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-3">Check your email</h1>
+            <p className="text-[#e7e2ff]/80 text-base md:text-lg leading-relaxed">
+              Loading verification details...
+            </p>
+          </section>
+        </main>
+      }
+    >
+      <SignupSuccessContent />
+    </Suspense>
   );
 }
