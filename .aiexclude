@@ -11,3 +11,7 @@ dist/
 # Heavy Metadata
 package-lock.json
 yarn.lock
+
+# Python Virtual Environments
+ai-worker/.venv/
+ai-worker/.venv/**

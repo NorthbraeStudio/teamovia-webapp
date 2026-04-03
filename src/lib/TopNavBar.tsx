@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-
 interface TeamInfo {
   id: string;
   name: string;
@@ -15,6 +13,8 @@ interface TopNavBarProps {
   selectedTeamId?: string | null;
   onTeamChange?: (teamId: string) => void;
   tasScore?: number | null;
+  onToggleMenu?: () => void;
+  isMenuOpen?: boolean;
 }
 
 export default function TopNavBar({
@@ -25,21 +25,32 @@ export default function TopNavBar({
   selectedTeamId = null,
   onTeamChange,
   tasScore = null,
+  onToggleMenu,
+  isMenuOpen = false,
 }: TopNavBarProps) {
   return (
-    <nav className="fixed top-0 w-full z-50 bg-slate-950/40 backdrop-blur-xl border-b border-[#47436c]/20 shadow-[0_20px_40px_rgba(0,0,0,0.4)] flex justify-between items-center px-6 py-3">
-      <div className="flex items-center gap-8">
-        <span className="text-xl font-bold tracking-tighter text-[#e7e2ff] font-['Inter']">
+    <nav className="fixed top-0 w-full z-50 bg-slate-950/40 backdrop-blur-xl border-b border-[#47436c]/20 shadow-[0_20px_40px_rgba(0,0,0,0.4)] flex justify-between items-center px-3 sm:px-6 py-3 gap-2">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+        <button
+          type="button"
+          aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={isMenuOpen}
+          onClick={onToggleMenu}
+          className="lg:hidden p-2 rounded-md text-[#e7e2ff] hover:bg-[#252147]/60 transition-colors"
+        >
+          <span className="material-symbols-outlined">{isMenuOpen ? "close" : "menu"}</span>
+        </button>
+        <span className="text-base sm:text-xl font-bold tracking-tighter text-[#e7e2ff] font-['Inter'] whitespace-nowrap">
           TEAMOVIA AI
         </span>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         {/* Team selector dropdown */}
         {teams.length > 0 && (
           <select
             value={selectedTeamId || ""}
             onChange={(e) => onTeamChange?.(e.target.value)}
-            className="text-xs sm:text-sm font-medium rounded-full px-3 py-2 bg-slate-800 text-white border border-[#7b82a1]/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="max-w-[120px] sm:max-w-none text-xs sm:text-sm font-medium rounded-full px-2 sm:px-3 py-2 bg-slate-800 text-white border border-[#7b82a1]/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
           >
             <option value="" disabled>
               Select team
@@ -70,7 +81,7 @@ export default function TopNavBar({
             search
           </span>
           <input
-            className="bg-surface-container-lowest border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary/40 w-48 md:w-64 transition-all"
+            className="hidden md:block bg-surface-container-lowest border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary/40 w-48 md:w-64 transition-all"
             placeholder="Search matches..."
             type="text"
             value={searchValue}
@@ -78,7 +89,7 @@ export default function TopNavBar({
           />
         </div>
         )}
-        <div className="flex items-center gap-2 ml-2">
+        <div className="hidden sm:flex items-center gap-2 ml-1 sm:ml-2">
           <button className="p-2 text-on-surface-variant hover:text-primary transition-colors">
             <span className="material-symbols-outlined">notifications</span>
           </button>

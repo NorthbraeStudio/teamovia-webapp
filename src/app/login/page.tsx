@@ -11,19 +11,36 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
 
+  const getRedirectPathForUser = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error) return "/";
+      return profile?.role === "admin" ? "/admin" : "/";
+    } catch {
+      return "/";
+    }
+  };
+
   useEffect(() => {
-    // Redirects the user to the home page if they are already logged in.
+    // Redirect users with an active session to their role-specific landing page.
     const checkSession = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (session) {
-        router.push("/");
+
+      if (session?.user?.id) {
+        const redirectPath = await getRedirectPathForUser(session.user.id);
+        router.replace(redirectPath);
       }
     };
+
     checkSession();
   }, [router]);
 
@@ -31,7 +48,6 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setMessage(null);
 
     try {
       if (isSignUp) {
@@ -40,19 +56,20 @@ export default function LoginPage() {
           password,
         });
         if (error) throw error;
-        setMessage(
-          "Success! Please check your email to verify and authorise your account."
-        );
+        router.replace(`/signup-success?email=${encodeURIComponent(email)}`);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        router.push("/");
+
+        const userId = data.user?.id;
+        const redirectPath = userId ? await getRedirectPathForUser(userId) : "/";
+        router.replace(redirectPath);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Authentication failed.");
     } finally {
       setLoading(false);
     }
@@ -104,7 +121,7 @@ export default function LoginPage() {
             </div>
             <div className="space-y-6">
               <h2 className="text-5xl xl:text-7xl font-bold tracking-tight text-on-surface leading-[1.1]">
-                Optimise your <span className="text-secondary">squad's</span> performance with TEAMOVIA AI.
+                Optimise your <span className="text-secondary">squad&apos;s</span> performance with TEAMOVIA AI.
               </h2>
               <p className="text-xl text-on-surface-variant max-w-xl leading-relaxed">
                 Access elite-level tactical analytics, insights, and forecasting in one unified digital dashboard.
@@ -136,8 +153,6 @@ export default function LoginPage() {
               </div>
 
               {error && <div className="mb-4 p-3 bg-error-container/50 border border-error text-on-error-container rounded-lg text-sm">{error}</div>}
-              {message && <div className="mb-4 p-3 bg-green-900/50 border border-green-500 text-green-200 rounded-lg text-sm">{message}</div>}
-
               <form onSubmit={handleAuth} className="space-y-6">
                 <div className="space-y-2">
                   <label className="block text-xs font-medium uppercase tracking-widest text-on-surface-variant ml-1" htmlFor="email">Email Address</label>
@@ -175,7 +190,7 @@ export default function LoginPage() {
               <div className="mt-10 text-center">
                 <p className="text-on-surface-variant">
                   {isSignUp ? "Already have an account?" : "New to Teamovia?"}
-                  <button type="button" onClick={() => { setIsSignUp(!isSignUp); setError(null); setMessage(null); }} className="text-primary font-bold hover:underline transition-all ml-1">
+                  <button type="button" onClick={() => { setIsSignUp(!isSignUp); setError(null); }} className="text-primary font-bold hover:underline transition-all ml-1">
                     {isSignUp ? "Log In" : "Create an account"}
                   </button>
                 </p>

@@ -31,7 +31,7 @@ const SCOTTISH_PREMIERSHIP_TEAMS = [
   { name: "Aberdeen", logo_url: "https://crests.football-data.org/3.svg", primary_colour: "#CC0000" },
   { name: "Hearts", logo_url: "https://crests.football-data.org/25.svg", primary_colour: "#E91E3C" },
   { name: "Hibernian", logo_url: "https://crests.football-data.org/29.svg", primary_colour: "#F7A600" },
-  { name: "St Johnstone", logo_url: "https://crests.football-data.org/40.svg", primary_colour: "#1B6CA8" },
+  { name: "Falkirk", logo_url: "https://crests.football-data.org/40.svg", primary_colour: "#1A2B6D" },
   { name: "Kilmarnock", logo_url: "https://crests.football-data.org/34.svg", primary_colour: "#0066CC" },
   { name: "Ross County", logo_url: "https://crests.football-data.org/80.svg", primary_colour: "#003D7A" },
   { name: "Motherwell", logo_url: "https://crests.football-data.org/38.svg", primary_colour: "#E20011" },
