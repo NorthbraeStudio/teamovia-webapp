@@ -1,10 +1,13 @@
 import os
 import pathlib
 import re
+import shutil
 import tempfile
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
 import modal
 
@@ -321,6 +324,50 @@ def analyse_match(body: Dict[str, Any]) -> Dict[str, Any]:
 
         raise RuntimeError("Unable to insert tactical events after schema fallback retries")
 
+    def is_youtube_source(value: str) -> bool:
+        try:
+            parsed = urlparse(value)
+        except Exception:
+            return False
+
+        host = (parsed.hostname or "").lower()
+        return host in {
+            "youtu.be",
+            "youtube.com",
+            "www.youtu.be",
+            "m.youtube.com",
+            "www.youtube.com",
+        }
+
+    def is_direct_video_source(value: str) -> bool:
+        try:
+            parsed = urlparse(value)
+        except Exception:
+            return False
+
+        if parsed.scheme not in {"http", "https"}:
+            return False
+
+        return bool(re.search(r"\.(mp4|mov|m4v|webm)$", parsed.path, re.IGNORECASE))
+
+    def download_direct_video(source_url: str, output_dir: str) -> tuple[Dict[str, Any], str]:
+        parsed = urlparse(source_url)
+        extension_match = re.search(r"\.(mp4|mov|m4v|webm)$", parsed.path, re.IGNORECASE)
+        extension = extension_match.group(1).lower() if extension_match else "mp4"
+        output_path = os.path.join(output_dir, f"video.{extension}")
+
+        request = Request(
+            source_url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+            },
+        )
+
+        with urlopen(request, timeout=300) as response, open(output_path, "wb") as output_file:
+            shutil.copyfileobj(response, output_file)
+
+        return {"fps": DEFAULT_FPS}, output_path
+
     def with_event_type(items: list, forced_event_type: str) -> list:
         return [{**item, "event_type": forced_event_type} for item in items]
 
@@ -501,19 +548,22 @@ def analyse_match(body: Dict[str, Any]) -> Dict[str, Any]:
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             # --- download video -------------------------------------------
-            output_template = os.path.join(tmpdir, "video.%(ext)s")
-            download_options = {
-                "format": "best",
-                "outtmpl": output_template,
-                "quiet": True,
-                "no_warnings": True,
-                "merge_output_format": "mp4",
-            }
-
             try:
-                with yt_dlp.YoutubeDL(download_options) as ydl:
-                    info = ydl.extract_info(video_url, download=True)
-                    video_path = ydl.prepare_filename(info)
+                if is_direct_video_source(video_url) and not is_youtube_source(video_url):
+                    info, video_path = download_direct_video(video_url, tmpdir)
+                else:
+                    output_template = os.path.join(tmpdir, "video.%(ext)s")
+                    download_options = {
+                        "format": "best",
+                        "outtmpl": output_template,
+                        "quiet": True,
+                        "no_warnings": True,
+                        "merge_output_format": "mp4",
+                    }
+
+                    with yt_dlp.YoutubeDL(download_options) as ydl:
+                        info = ydl.extract_info(video_url, download=True)
+                        video_path = ydl.prepare_filename(info)
             except Exception as exc:
                 raise fastapi.HTTPException(
                     status_code=422,
@@ -532,7 +582,9 @@ def analyse_match(body: Dict[str, Any]) -> Dict[str, Any]:
             snapshot_interval_frames = max(1, int(round(SNAPSHOT_SECONDS / frame_seconds)))
 
             if not video_path.endswith(".mp4"):
-                video_path = video_path.rsplit(".", 1)[0] + ".mp4"
+                mp4_candidate = video_path.rsplit(".", 1)[0] + ".mp4"
+                if os.path.exists(mp4_candidate):
+                    video_path = mp4_candidate
 
             # --- run tracker -----------------------------------------------
             model = YOLO("yolov8n.pt")

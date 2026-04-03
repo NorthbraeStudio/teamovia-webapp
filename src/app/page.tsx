@@ -307,6 +307,31 @@ function highlightSearchMatches(text: string, query: string): ReactNode {
   return <>{parts}</>;
 }
 
+async function getValidAccessToken(): Promise<string | null> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (session?.access_token) {
+    return session.access_token;
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const { data, error } = await supabase.auth.refreshSession();
+  if (error) {
+    return null;
+  }
+
+  return data.session?.access_token ?? null;
+}
+
 export default function Home() {
   const router = useRouter();
   const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
@@ -560,11 +585,9 @@ export default function Home() {
         return;
       }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const accessToken = await getValidAccessToken();
 
-      if (!session?.access_token) {
+      if (!accessToken) {
         return;
       }
 
@@ -576,7 +599,7 @@ export default function Home() {
 
           try {
             const response = await fetch(`/api/video-url?match_id=${match.id}`, {
-              headers: { Authorization: `Bearer ${session.access_token}` },
+              headers: { Authorization: `Bearer ${accessToken}` },
             });
 
             if (!response.ok) {

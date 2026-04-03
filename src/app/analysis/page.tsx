@@ -287,6 +287,31 @@ function getTeamNameById(teams: TeamInfo[], teamId: string | null | undefined): 
   return teams.find((team) => team.id === teamId)?.name ?? teamId;
 }
 
+async function getValidAccessToken(): Promise<string | null> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (session?.access_token) {
+    return session.access_token;
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const { data, error } = await supabase.auth.refreshSession();
+  if (error) {
+    return null;
+  }
+
+  return data.session?.access_token ?? null;
+}
+
 async function fetchLatestTeamId(): Promise<string | null> {
   const { data, error } = await supabase
     .from("teams")
@@ -336,11 +361,9 @@ async function fetchTacticalEvents(matchId: string): Promise<TacticalEvent[]> {
 }
 
 async function fetchMatchAggregate(matchId: string, binSeconds = 5): Promise<AggregateResponse | null> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const accessToken = await getValidAccessToken();
 
-  if (!session?.access_token) {
+  if (!accessToken) {
     return null;
   }
 
@@ -348,7 +371,7 @@ async function fetchMatchAggregate(matchId: string, binSeconds = 5): Promise<Agg
     `/api/analyse/aggregate?match_id=${encodeURIComponent(matchId)}&bin_seconds=${encodeURIComponent(String(binSeconds))}`,
     {
       headers: {
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     }
   );
@@ -1392,18 +1415,16 @@ export default function AnalysisDashboard() {
       setIsResolvingPlayback(true);
       setPlaybackError(null);
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const accessToken = await getValidAccessToken();
 
-        if (!session?.access_token) {
+        if (!accessToken) {
           setPlaybackError("Session expired. Please log in again.");
           setPlaybackUrl(null);
           return;
         }
 
         const response = await fetch(`/api/video-url?match_id=${selectedMatchId}`, {
-          headers: { Authorization: `Bearer ${session.access_token}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
         const payload = await response.json();
 
